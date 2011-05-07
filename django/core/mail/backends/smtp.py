@@ -33,6 +33,7 @@ class EmailBackend(BaseEmailBackend):
             self.use_tls = use_tls
         self.connection = None
         self._lock = threading.RLock()
+        self.timeout = settings.EMAIL_SMTP_TIMEOUT
 
     def open(self):
         """
@@ -46,7 +47,8 @@ class EmailBackend(BaseEmailBackend):
             # If local_hostname is not specified, socket.getfqdn() gets used.
             # For performance, we use the cached FQDN for local_hostname.
             self.connection = smtplib.SMTP(self.host, self.port,
-                                           local_hostname=DNS_NAME.get_fqdn())
+                                           local_hostname=DNS_NAME.get_fqdn(),
+                                           timeout=self.timeout)
             if self.use_tls:
                 self.connection.ehlo()
                 self.connection.starttls()
