@@ -51,6 +51,7 @@ signals.request_finished.connect(close_connection)
 def reset_queries(**kwargs):
     for conn in connections.all():
         conn.queries = []
+        conn.query_count = 0
 signals.request_started.connect(reset_queries)
 
 # Register an event that rolls back the connections

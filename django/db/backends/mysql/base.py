@@ -106,11 +106,14 @@ class CursorWrapper(object):
     """
     codes_for_integrityerror = (1048,)
 
-    def __init__(self, cursor):
+    def __init__(self, cursor, db=None):
         self.cursor = cursor
+        self.db = db
 
     def execute(self, query, args=None):
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.execute(query, args)
         except Database.IntegrityError, e:
             raise utils.IntegrityError, utils.IntegrityError(*tuple(e)), sys.exc_info()[2]
@@ -125,6 +128,8 @@ class CursorWrapper(object):
 
     def executemany(self, query, args):
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.executemany(query, args)
         except Database.IntegrityError, e:
             raise utils.IntegrityError, utils.IntegrityError(*tuple(e)), sys.exc_info()[2]
@@ -397,7 +402,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             # NULL.  Disabling this value brings this aspect of MySQL in line with
             # SQL standards.
             cursor.execute('SET SQL_AUTO_IS_NULL = 0')
-        return CursorWrapper(cursor)
+        return CursorWrapper(cursor, db=self)
 
     def _rollback(self):
         try:

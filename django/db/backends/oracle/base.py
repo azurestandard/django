@@ -477,7 +477,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if 'use_returning_into' in conn_params:
                 del conn_params['use_returning_into']
             self.connection = Database.connect(conn_string, **conn_params)
-            cursor = FormatStylePlaceholderCursor(self.connection)
+            cursor = FormatStylePlaceholderCursor(self.connection, db=self)
             # Set oracle date to ansi date format.  This only needs to execute
             # once when we create a new connection. We also set the Territory
             # to 'AMERICA' which forces Sunday to evaluate to a '1' in TO_CHAR().
@@ -521,7 +521,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 pass
             connection_created.send(sender=self.__class__, connection=self)
         if not cursor:
-            cursor = FormatStylePlaceholderCursor(self.connection)
+            cursor = FormatStylePlaceholderCursor(self.connection, db=self)
         return cursor
 
     # Oracle doesn't support savepoint commits.  Ignore them.
@@ -636,12 +636,13 @@ class FormatStylePlaceholderCursor(object):
     """
     charset = 'utf-8'
 
-    def __init__(self, connection):
+    def __init__(self, connection, db=None):
         self.cursor = connection.cursor()
         # Necessary to retrieve decimal values without rounding error.
         self.cursor.numbersAsStrings = True
         # Default arraysize of 1 is highly sub-optimal.
         self.cursor.arraysize = 100
+        self.db = db
 
     def _format_params(self, params):
         return tuple([OracleParam(p, self, True) for p in params])
@@ -672,6 +673,8 @@ class FormatStylePlaceholderCursor(object):
         query = convert_unicode(query % tuple(args), self.charset)
         self._guess_input_sizes([params])
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.execute(query, self._param_generator(params))
         except Database.IntegrityError, e:
             raise utils.IntegrityError, utils.IntegrityError(*tuple(e)), sys.exc_info()[2]
@@ -700,6 +703,8 @@ class FormatStylePlaceholderCursor(object):
         formatted = [self._format_params(i) for i in params]
         self._guess_input_sizes(formatted)
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.executemany(query,
                                 [self._param_generator(p) for p in formatted])
         except Database.IntegrityError, e:
