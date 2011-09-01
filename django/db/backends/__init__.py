@@ -30,6 +30,7 @@ class BaseDatabaseWrapper(object):
         # to disambiguate it from Django settings modules.
         self.connection = None
         self.queries = []
+        self.query_count = 0
         self.settings_dict = settings_dict
         self.alias = alias
         self.use_debug_cursor = None

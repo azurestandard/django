@@ -46,11 +46,14 @@ class CursorWrapper(object):
     particular exception instances and reraise them with the right types.
     """
 
-    def __init__(self, cursor):
+    def __init__(self, cursor, db=None):
         self.cursor = cursor
+        self.db = db
 
     def execute(self, query, args=None):
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.execute(query, args)
         except Database.IntegrityError as e:
             six.reraise(utils.IntegrityError, utils.IntegrityError(*tuple(e.args)), sys.exc_info()[2])
@@ -59,6 +62,8 @@ class CursorWrapper(object):
 
     def executemany(self, query, args):
         try:
+            if self.db:
+                self.db.query_count += 1
             return self.cursor.executemany(query, args)
         except Database.IntegrityError as e:
             six.reraise(utils.IntegrityError, utils.IntegrityError(*tuple(e.args)), sys.exc_info()[2])
@@ -201,7 +206,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             connection_created.send(sender=self.__class__, connection=self)
         cursor = self.connection.cursor()
         cursor.tzinfo_factory = utc_tzinfo_factory if settings.USE_TZ else None
-        return CursorWrapper(cursor)
+        return CursorWrapper(cursor, db=self)
 
     def _enter_transaction_management(self, managed):
         """
