@@ -487,7 +487,7 @@ filter_raw_string = r"""
 ^(?P<constant>%(constant)s)|
 ^(?P<var>[%(var_chars)s]+|%(num)s)|
  (?:%(filter_sep)s
-     (?P<filter_name>\w+)
+     (?P<filter_name>[\w.]+)
          (?:%(arg_sep)s
              (?:
               (?P<constant_arg>%(constant)s)|
